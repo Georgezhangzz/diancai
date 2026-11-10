@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>点菜啦</title>
+<style>
+  :root{
+    --bg:#fbf6ee; --card:#fffdf9; --ink:#2b2420; --muted:#8a7d72; --line:#ece2d4;
+    --red:#c8372d; --red-soft:#fbe6e2; --gold:#e9a23b;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+  header{padding:28px 20px 8px;max-width:720px;margin:0 auto}
+  header .stamp{display:inline-block;border:2px solid var(--red);color:var(--red);font-weight:700;
+    padding:2px 10px;border-radius:6px;transform:rotate(-3deg);font-size:13px;letter-spacing:2px}
+  h1{font-family:"Songti SC","STSong","Noto Serif SC",serif;font-size:32px;margin:10px 0 4px;letter-spacing:2px}
+  header p{margin:0;color:var(--muted);font-size:14px}
+  .cats{display:flex;gap:8px;overflow-x:auto;padding:14px 20px 6px;max-width:720px;margin:0 auto;scrollbar-width:none}
+  .cats::-webkit-scrollbar{display:none}
+  .chip{flex:none;border:1px solid var(--line);background:var(--card);color:var(--ink);
+    padding:7px 14px;border-radius:999px;font-size:14px;cursor:pointer}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  main{max-width:720px;margin:0 auto;padding:8px 16px;display:grid;gap:14px}
+  @media(min-width:600px){main{grid-template-columns:1fr 1fr}}
+  .dish{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
+    display:flex;flex-direction:column;transition:border-color .2s, box-shadow .2s}
+  .dish.picked{border-color:var(--red);box-shadow:0 0 0 2px var(--red-soft)}
+  .ph{aspect-ratio:4/3;background:#f2e8da center/cover no-repeat;display:flex;align-items:center;justify-content:center;
+    font-size:44px;color:#d6c6b0;position:relative}
+  .ph .badge{position:absolute;top:10px;left:10px;background:rgba(255,253,249,.92);font-size:12px;
+    padding:3px 8px;border-radius:999px;color:var(--muted)}
+  .body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px;flex:1}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .name{font-size:18px;font-weight:700}
+  .desc{color:var(--muted);font-size:13px;line-height:1.5;margin:0}
+  .add{border:none;background:var(--red);color:#fff;width:36px;height:36px;border-radius:50%;font-size:22px;
+    line-height:1;cursor:pointer;flex:none}
+  .stepper{display:flex;align-items:center;gap:10px;flex:none}
+  .stepper button{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:18px;cursor:pointer}
+  .stepper span{min-width:16px;text-align:center;font-weight:700}
+  .spice{display:flex;gap:6px;flex-wrap:wrap}
+  .spice button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 10px;font-size:13px;cursor:pointer;color:var(--ink)}
+  .spice button.on{background:var(--red-soft);border-color:var(--red);color:var(--red);font-weight:600}
+  .empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:40px 0}
+  .bar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+    background:linear-gradient(transparent, var(--bg) 30%);pointer-events:none}
+  .bar button{pointer-events:auto;display:flex;justify-content:space-between;align-items:center;width:100%;max-width:688px;margin:0 auto;
+    background:var(--ink);color:#fff;border:none;border-radius:999px;padding:16px 22px;font-size:16px;cursor:pointer}
+  .bar button:disabled{background:#c9bfb3}
+  .bar b{background:var(--red);border-radius:999px;padding:2px 10px;margin-right:8px}
+  /* 确认弹层 */
+  .mask{position:fixed;inset:0;background:rgba(30,20,15,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
+  .mask.show{display:flex}
+  .sheet{background:var(--bg);width:100%;max-width:720px;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;
+    padding:20px 20px calc(20px + env(safe-area-inset-bottom))}
+  .sheet h2{margin:0 0 12px;font-size:20px}
+  .ticket{background:var(--card);border:1px dashed #d8c8b2;border-radius:12px;padding:6px 14px;margin-bottom:16px}
+  .ticket .li{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px dashed var(--line);font-size:15px}
+  .ticket .li:last-child{border-bottom:none}
+  .ticket .li small{color:var(--red);margin-left:6px}
+  label{display:block;font-size:13px;color:var(--muted);margin:12px 0 6px}
+  input,textarea{width:100%;font:inherit;font-size:16px;border:1px solid var(--line);border-radius:10px;padding:11px 12px;background:#fff;color:var(--ink)}
+  textarea{min-height:70px;resize:vertical}
+  .actions{display:flex;gap:10px;margin-top:18px}
+  .btn{flex:1;border:none;border-radius:999px;padding:14px;font-size:16px;cursor:pointer}
+  .btn.primary{background:var(--red);color:#fff;font-weight:600}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+  .btn:disabled{opacity:.6}
+  .err{color:var(--red);font-size:14px;margin-top:10px;min-height:1em}
+  .done{text-align:center;padding:30px 10px}
+  .done .big{font-size:56px}
+  .done h2{font-family:"Songti SC","STSong",serif;font-size:24px}
+  .done p{color:var(--muted)}
+  .loading{grid-column:1/-1;text-align:center;color:var(--muted);padding:60px 0}
+</style>
+</head>
+<body>
+<header>
+  <span class="stamp">私房菜</span>
+  <h1 id="title">我的小厨房</h1>
+  <p>想吃什么随便点，选好辣度，提交后我会收到通知 👨‍🍳</p>
+</header>
+<nav class="cats" id="cats"></nav>
+<main id="list"><div class="loading">菜单加载中…</div></main>
+
+<div class="bar"><button id="go" disabled><span><b id="count">0</b>还没选菜</span><span>去确认 →</span></button></div>
+
+<div class="mask" id="mask">
+  <div class="sheet" id="sheet"></div>
+</div>
+
+<script>
+// ======= 改这里：网页标题 =======
+const KITCHEN_NAME = '我的小厨房';
+// ================================
+
+const SPICE = ['不辣','微辣','中辣','特辣'];
+const SPICE_ICON = {'不辣':'','微辣':'🌶','中辣':'🌶🌶','特辣':'🌶🌶🌶'};
+let dishes = [], cat = '全部';
+const cart = new Map(); // dish_id -> {qty, spice}
+
+document.getElementById('title').textContent = KITCHEN_NAME;
+document.title = KITCHEN_NAME + ' · 点菜';
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = { get(k){ try{return localStorage.getItem(k)||''}catch{return ''} }, set(k,v){ try{localStorage.setItem(k,v)}catch{} } };
+
+async function load(){
+  try{
+    const r = await fetch('/api/dishes');
+    if(!r.ok) throw new Error((await r.json()).error || r.status);
+    dishes = await r.json();
+    renderCats(); render();
+  }catch(e){
+    document.getElementById('list').innerHTML = `<div class="empty">菜单没加载出来：${esc(e.message)}<br>稍后刷新试试</div>`;
+  }
+}
+
+function renderCats(){
+  const cats = ['全部', ...new Set(dishes.map(d => d.category).filter(Boolean))];
+  const el = document.getElementById('cats');
+  el.style.display = cats.length > 2 ? '' : 'none';
+  el.innerHTML = cats.map(c => `<button class="chip ${c===cat?'on':''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('');
+}
+
+function render(){
+  const list = document.getElementById('list');
+  const shown = dishes.filter(d => cat === '全部' || d.category === cat);
+  if(!shown.length){ list.innerHTML = '<div class="empty">这里还没有菜</div>'; updateBar(); return; }
+  list.innerHTML = shown.map(d => {
+    const c = cart.get(d.id);
+    const img = d.image_url ? `style="background-image:url('${esc(d.image_url)}')"` : '';
+    return `<article class="dish ${c?'picked':''}" data-id="${d.id}">
+      <div class="ph" ${img}>${d.image_url ? '' : '🍲'}${d.category ? `<span class="badge">${esc(d.category)}</span>` : ''}</div>
+      <div class="body">
+        <div class="row">
+          <div class="name">${esc(d.name)}</div>
+          ${c ? `<div class="stepper"><button data-act="dec">−</button><span>${c.qty}</span><button data-act="inc">+</button></div>`
+              : `<button class="add" data-act="add" aria-label="加入">+</button>`}
+        </div>
+        ${d.description ? `<p class="desc">${esc(d.description)}</p>` : ''}
+        ${c && d.spicy_option ? `<div class="spice">${SPICE.map(s => `<button data-act="spice" data-v="${s}" class="${c.spice===s?'on':''}">${s} ${SPICE_ICON[s]}</button>`).join('')}</div>` : ''}
+      </div>
+    </article>`;
+  }).join('');
+  updateBar();
+}
+
+function updateBar(){
+  const n = [...cart.values()].reduce((s,c) => s + c.qty, 0);
+  document.getElementById('count').textContent = n;
+  document.getElementById('go').disabled = n === 0;
+  document.querySelector('#go span').lastChild.textContent = n ? `已选 ${cart.size} 道菜` : '还没选菜';
+}
+
+document.getElementById('cats').addEventListener('click', e => {
+  const b = e.target.closest('[data-cat]'); if(!b) return;
+  cat = b.dataset.cat; renderCats(); render();
+});
+
+document.getElementById('list').addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if(!b) return;
+  const id = Number(b.closest('.dish').dataset.id);
+  const c = cart.get(id);
+  switch(b.dataset.act){
+    case 'add': cart.set(id, {qty:1, spice:'微辣'}); break;
+    case 'inc': c.qty = Math.min(c.qty + 1, 10); break;
+    case 'dec': c.qty > 1 ? c.qty-- : cart.delete(id); break;
+    case 'spice': c.spice = b.dataset.v; break;
+  }
+  render();
+});
+
+const mask = document.getElementById('mask'), sheet = document.getElementById('sheet');
+document.getElementById('go').addEventListener('click', openSheet);
+mask.addEventListener('click', e => { if(e.target === mask) mask.classList.remove('show'); });
+
+function openSheet(){
+  const lines = [...cart.entries()].map(([id,c]) => {
+    const d = dishes.find(x => x.id === id);
+    return `<div class="li"><span>${esc(d.name)}${d.spicy_option ? `<small>${c.spice}</small>` : ''}</span><span>×${c.qty}</span></div>`;
+  }).join('');
+  sheet.innerHTML = `
+    <h2>确认一下 🧾</h2>
+    <div class="ticket">${lines}</div>
+    <label for="f-name">你的名字 *</label>
+    <input id="f-name" maxlength="20" placeholder="让我知道是谁点的" value="${esc(store.get('dc_name'))}">
+    <label for="f-when">想什么时候吃（可不填）</label>
+    <input id="f-when" maxlength="40" placeholder="比如：周六晚上">
+    <label for="f-note">备注（可不填）</label>
+    <textarea id="f-note" maxlength="300" placeholder="忌口、少油、不要香菜……"></textarea>
+    <div class="err" id="f-err"></div>
+    <div class="actions">
+      <button class="btn ghost" id="f-back">再看看</button>
+      <button class="btn primary" id="f-send">提交订单</button>
+    </div>`;
+  mask.classList.add('show');
+  document.getElementById('f-back').onclick = () => mask.classList.remove('show');
+  document.getElementById('f-send').onclick = submit;
+}
+
+async function submit(){
+  const name = document.getElementById('f-name').value.trim();
+  const err = document.getElementById('f-err');
+  if(!name){ err.textContent = '请填一下名字～'; return; }
+  const btn = document.getElementById('f-send');
+  btn.disabled = true; btn.textContent = '发送中…'; err.textContent = '';
+  try{
+    const r = await fetch('/api/order', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        name,
+        when: document.getElementById('f-when').value,
+        note: document.getElementById('f-note').value,
+        items: [...cart.entries()].map(([dish_id,c]) => ({dish_id, qty:c.qty, spice:c.spice})),
+      }),
+    });
+    const data = await r.json();
+    if(!r.ok) throw new Error(data.error || '提交失败');
+    store.set('dc_name', name);
+    cart.clear(); render();
+    sheet.innerHTML = `<div class="done"><div class="big">🥢</div><h2>收到啦，${esc(name)}！</h2>
+      <p>订单 #${data.id} 已经发给厨师了<br>等我开火～</p>
+      <div class="actions"><button class="btn ghost" id="f-close">好的</button></div></div>`;
+    document.getElementById('f-close').onclick = () => mask.classList.remove('show');
+  }catch(e){
+    err.textContent = e.message; btn.disabled = false; btn.textContent = '提交订单';
+  }
+}
+
+load();
+</script>
+</body>
+</html>
